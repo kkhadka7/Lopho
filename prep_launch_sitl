@@ -1,0 +1,47 @@
+#!/bin/bash
+# & is used to make this command run in background so that subsequent commands can be run
+# dont forget to make this file executable by
+# chmod +x launchSitl
+# then move to /usr/local/bin folder
+# sudo mv launchSitl /usr/local/bin
+
+# first of all, kill all previous instances of exact program that we are trying to run and 
+# also at the same time frees all ports required later programs
+kill -9 $(ps -ef | grep QG | awk -F' ' '{print $2}') > /dev/null 2>&1
+kill -9 $(ps -ef | grep ardu | awk -F' ' '{print $2}') > /dev/null 2>&1
+kill -9 $(ps -ef | grep mav | awk -F' ' '{print $2}') > /dev/null 2>&1
+kill -9 $(ps -ef | grep apm  | awk -F' ' '{print $2}') > /dev/null 2>&1
+
+# dronekit_sitl copter --home lat,long,height,bearing
+#/usr/local/bin/dronekit-sitl copter --home 43.48042601670158,-80.52427149031206,50,0&
+/home/kailash7/Desktop/Drone/apm/ardupilot/build/sitl/bin/arducopter -S -I0 --home 43.48042601670158,-80.52427149031206,7,343 --model ""+"" --speedup 1 --defaults /home/kailash7/Desktop/Drone/apm/ardupilot/Tools/autotest/default_params/copter.parm&						
+sleep 3
+
+# run Qground control
+# redirect terminal output by QGC to null device
+/usr/local/bin/QGC.AppImage 2>/dev/null&
+sleep 3
+
+#start MAVProxy
+# screen -dm is another way to send process to background
+# if not installed:
+# sudo apt install screen
+#gnome-terminal -e mavproxy.py --master=tcp:127.0.0.1:5760 --out=udp:127.0.0.1:14550 --out=tcp:127.0.0.1:5762&
+#gnome-terminal -e "mavproxy.py --master=tcp:127.0.0.1:5760 --out=udp:127.0.0.1:14550 --out=tcp:127.0.0.1:5762; $SHELL"
+#screen -dm mavproxy.py --master=tcp:127.0.0.1:5760 --out=udp:127.0.0.1:14550 --out=tcp:127.0.0.1:5762
+#gnome-terminal -e "bash -c 'mavproxy.py --master=tcp:127.0.0.1:5760 --out=udp:127.0.0.1:14550 --out=tcp:127.0.0.1:5762; $SHELL'"
+mavproxy.py --master=tcp:127.0.0.1:5760 --out=udp:127.0.0.1:14550 --out=tcp:127.0.0.1:5762 --out=udp:127.0.0.1:14551
+
+
+#run python dronekit script
+# $1 is replaced by first argument 
+#/usr/bin/python "$1" --connect tcp:127.0.0.1:5762
+
+function finish {
+	kill -9 $(ps -ef | grep QG | awk -F' ' '{print $2}') > /dev/null 2>&1
+	kill -9 $(ps -ef | grep ardu | awk -F' ' '{print $2}') > /dev/null 2>&1
+	kill -9 $(ps -ef | grep mav | awk -F' ' '{print $2}') > /dev/null 2>&1
+	kill -9 $(ps -ef | grep apm  | awk -F' ' '{print $2}') > /dev/null 2>&1
+}
+
+trap finish EXIT
